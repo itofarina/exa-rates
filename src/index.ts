@@ -1,11 +1,15 @@
 import "dotenv/config";
 
-import { createPublicClient, http } from "viem";
+import { createPublicClient, http, zeroAddress } from "viem";
 import { optimism } from "viem/chains";
 
 import {
-  abi,
-  address,
+  abi as previewerAbi,
+  address as previewerAddress,
+} from "@exactly/protocol/deployments/optimism/Previewer.json";
+import {
+  abi as ratePreviewerAbi,
+  address as ratePreviewerAddress,
 } from "@exactly/protocol/deployments/optimism/RatePreviewer.json";
 import { floatingDepositRates } from "@exactly/lib";
 
@@ -16,16 +20,42 @@ const client = createPublicClient({
 
 async function main() {
   try {
-    const snapshot = await client.readContract({
-      address: address as `0x${string}`,
-      abi: abi,
+    const exactly = (await client.readContract({
+      address: previewerAddress as `0x${string}`,
+      abi: previewerAbi,
+      functionName: "exactly",
+      args: [zeroAddress],
+    })) as any;
+
+    const markets = Object.fromEntries(
+      exactly.map(({ market, symbol }: any) => [market, symbol])
+    );
+
+    console.log("markets", markets);
+
+    const snapshot = (await client.readContract({
+      address: ratePreviewerAddress as `0x${string}`,
+      abi: ratePreviewerAbi,
       functionName: "snapshot",
       args: [],
-    });
+    })) as any;
 
     console.log("floating deposit rates");
-    console.log(floatingDepositRates(snapshot as any));
+    console.log(
+      floatingDepositRates(snapshot).map(({ market, rate }: any) => ({
+        market: markets[market],
+        rate: Number(rate) / 1e16,
+      }))
+    );
     console.log("--------------------------------");
+
+    console.log("floating borrow rates");
+    console.log(
+      snapshot.map(({ market, floatingRate }: any) => ({
+        market: markets[market],
+        rate: Number(floatingRate) / 1e16,
+      }))
+    );
   } catch (error) {
     console.error(error);
   }
