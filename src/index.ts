@@ -56,6 +56,19 @@ async function main() {
         rate: Number(floatingRate) / 1e16,
       }))
     );
+
+    console.log("fixed borrow rates");
+    for (const { market, fixedPools } of exactly) {
+      console.log("--------------------------------");
+      console.log(markets[market]);
+      console.log(
+        fixedPools.map(({ maturity, minBorrowRate, depositRate }: any) => ({
+          maturity: new Date(Number(maturity) * 1000).toISOString(),
+          minBorrowRate: Number(minBorrowRate) / 1e16,
+          depositRate: Number(depositRate) / 1e16,
+        }))
+      );
+    }
   } catch (error) {
     console.error(error);
   }
